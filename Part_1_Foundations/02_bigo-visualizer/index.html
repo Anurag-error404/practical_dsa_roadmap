@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Big-O Visualizer</title>
+  </head>
+  <body>
+    <label>Algorithm <select id="algorithm"></select></label>
+    <label>Input sizes (comma-separated) <input id="sizes" value="1000,10000,100000" /></label>
+    <label><input type="checkbox" id="log-scale" /> Log scale</label>
+    <button id="run">Run</button>
+    <canvas id="chart" width="800" height="400"></canvas>
+
+    <script type="module">
+      import { ALGORITHMS } from "./algorithms.js";
+      import { GrowthChart } from "./chart.js";
+
+      const select = document.getElementById("algorithm");
+      for (const a of ALGORITHMS) select.add(new Option(a.label, a.id));
+
+      const chart = new GrowthChart(document.getElementById("chart"));
+      const worker = new Worker("./benchmark-worker.js", { type: "module" });
+      worker.onmessage = ({ data }) => {
+        chart.addPoint(data.algorithmId, data.size, data.timeMs);
+        chart.render();
+      };
+
+      document.getElementById("log-scale").onchange = (e) => {
+        chart.setLogScale(e.target.checked);
+        chart.render();
+      };
+      document.getElementById("run").onclick = () => {
+        const sizes = document.getElementById("sizes").value.split(",").map(Number);
+        worker.postMessage({ algorithmId: select.value, sizes, trials: 5 });
+      };
+      chart.render();
+    </script>
+  </body>
+</html>
